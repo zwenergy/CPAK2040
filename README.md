@@ -1,2 +1,39 @@
 # CPAK2040
 An RP2040-based controller pak for the N64.
+
+## Overview
+The main idea of CPAK2040 is to a have a simple, cheap and easily DIY-able controller pak alternative for the N64 which is non-volatile (meaning not relying on a battery to keep the controller pak data like the original based on SRAM). 
+For this, a Raspberry Pi Pico board is used, as it is widely available, cheap and easy to solder even for beginners.
+
+A regular Raspberry Pi Pico board has a 2 MB Flash, whereas a single N64 controller pak has a capacity of 32 kB.
+The software running on the Pico to emulate the controller pak only takes up a fraction of the available Flash memory, hence quite many "virtual controller paks" can be stored in the Pico's Flash.
+
+## BOM
+Well, the BOM is short.
+You need the **PCB** and a **Raspberry Pi Pico board**.
+
+## PCB
+The Gerber files to create the PCB can be found in the "gerber" folder.
+You need to order the PCB with **1.2 mm thickness** and **ENIG or hard gold**.
+Using regular HASL is not recommended, as the PCB contacts quickly wear down, while solder may also rub onto the controller's connection pins.
+
+## Setting up the Pi Pico
+Hold down the BOOTSEL button, connect the Pi Pico via USB to your computer and drag'n'drop the .UF2 from the latest release onto the Pi Pico device.
+
+## Using the CPAK2040
+If you're using the CPAK2040 without the 3D printed case, make sure that you orientate the PCB correctly.
+It's noted on the PCB, which side should face the front of the controller ("controller cable side") and which to the back of the controller ("Z-trigger side").
+
+### Storing behaviour
+The current controller pak's content is hold in the RP2040's SRAM.
+When a write the controller pak happens, the updated contents are stored into the Flash.
+In order to avoid unneccassary writes to the Flash, the Flash content is not directly updated, but a small timeout of some seconds is introduced, such that multiple writes can be combined into a single Flash rewrite.
+This is signaled using the Pico's LED.
+When then LED is on, this means that there is fresh data in the controller pak which is not written back to the Flash yet.
+**Do not unplug the controller pak, while the LED is on, or otherwise you risk losing the latest controller pak data or data corruption.**
+
+This delayed storing behaviour is done to reduce the number of Flash rewrites.
+The Flash has a limited number of writes of ca. 100,000 before it wears out.
+**This also means, that each "virtual controller pak" on the CPAK2040 has a lifetime of around 100,000 writes.**
+Realistically, this should be enough forever for most people I guess.
+If you save each day 10 times to the controller pak, you can do that for 27 years straight before you're getting close the 100,000 writes.
