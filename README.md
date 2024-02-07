@@ -24,6 +24,10 @@ Hold down the BOOTSEL button, connect the Pi Pico via USB to your computer and d
 If you're using the CPAK2040 without the 3D printed case, make sure that you orientate the PCB correctly.
 It's noted on the PCB, which side should face the front of the controller ("controller cable side") and which to the back of the controller ("Z-trigger side").
 
+Initially, all virtual controller paks will be "corrupted", as they are not formatted as a controller pak data.
+Start a game using a controller pak and hold START during the startup, this will bring up the controller pak manager.
+Here, you can typically "repair" aka format the current virtual controller pak.
+
 ### Storing behaviour
 The current controller pak's content is hold in the RP2040's SRAM.
 When a write the controller pak happens, the updated contents are stored into the Flash.
@@ -37,3 +41,14 @@ The Flash has a limited number of writes of ca. 100,000 before it wears out.
 **This also means, that each "virtual controller pak" on the CPAK2040 has a lifetime of around 100,000 writes.**
 Realistically, this should be enough forever for most people I guess.
 If you save each day 10 times to the controller pak, you can do that for 27 years straight before you're getting close the 100,000 writes.
+
+### Changing Virtual Controller Pak
+To change the current virtual controller pak (VCP), hold the BOOTSEL button down.
+The CPAK2040 will jump to the next VCP, indicating the current index by flashing the LED.
+After the last VCP, the index will jump back to the first.
+The current VCP index is stored into the Flash after 10s not changing it, so also after unplugging the CPAK2040 it will remember the last VCP used.
+
+Note that many games will not reload the controller pak content, unless they sense that the controller pak is physically removed and plugged back in again.
+
+The simple "hold button to increase VCP index" is not ideal, especially with a larger number of VCPs.
+I am planning on adding a better navigating scheme.
