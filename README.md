@@ -52,3 +52,8 @@ Note that many games will not reload the controller pak content, unless they sen
 
 The simple "hold button to increase VCP index" is not ideal, especially with a larger number of VCPs.
 I am planning on adding a better navigating scheme.
+
+## Disclaimer
+**Use the files and/or schematics to build your own board at your own risk**.
+This board works fine for me, but it's a simple hobby project, so there is no liability for errors in the schematics and/or board files.
+**Use at your own risk**.
