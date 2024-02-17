@@ -4,6 +4,11 @@
 #include "hardware/sync.h"
 #include "hardware/structs/ioqspi.h"
 #include "hardware/structs/sio.h"
+#include "pico/time.h"
+
+// USB-related
+#include "bsp/board.h"
+#include "tusb_config.h"
 
 // Pin Definitions.
 #define A0 0
@@ -49,7 +54,7 @@
 #define ADDRMASK  0b00000000000000111111111111111
 
 #define MEMPAKSIZE 32768
-#define NRMEMPAKS 12
+#define NRMEMPAKS 10
 
 // Address in the Flash for the first mem pak.
 #define FLASHADDR ( PICO_FLASH_SIZE_BYTES - ( NRMEMPAKS * MEMPAKSIZE ) )
@@ -62,6 +67,9 @@
 
 // Waiting time after a write to the mem pak before the Flash is rewritten.
 #define REWRITEWAIT_MS 5000
+
+// Waiting time to enable USB mode (multiples of REWRITECHECKINT_MS)
+#define USBMODEWAIT (5000/REWRITECHECKINT_MS)
 
 // Counter for checking mempak button change activate (multiples of REWRITECHECKINT_MS)
 #define MEMPAKCHANGECNTMAX 4
@@ -82,6 +90,7 @@ void rewriteFlashListener();
 void doMemPakAction();
 uint32_t getBootSelButton();
 void doBlinkPattern( uint32_t count );
+void enterUSBMode();
 
 // The actual controller pak.
 uint8_t mempak[ MEMPAKSIZE ];
@@ -219,6 +228,10 @@ int __not_in_flash_func( main() ) {
   // Signal which mem pak is active.
   doBlinkPattern( memPakCntr + 1 );
   
+  // Start USB-related tasks.
+  //board_init();
+  //tusb_init();
+  
   // Wait a bit to continue, so that the second core is up and running,
   // because the "checking bootsel button" function called in the 
   // rewriteFlashListener will temporarily disable Flash access.
@@ -337,7 +350,10 @@ void __not_in_flash_func( rewriteFlashListener() ) {
     uint32_t curButton = getBootSelButton();
 
     if ( curButton ) {
-      if ( buttonPushCnt >= MEMPAKCHANGECNTMAX && !changeDone ) {
+      if ( buttonPushCnt >= USBMODEWAIT ) {
+        enterUSBMode();
+        
+      } else if ( buttonPushCnt >= MEMPAKCHANGECNTMAX && !changeDone ) {
         // Increase mem pak counter.
         if ( memPakCntr >= NRMEMPAKS - 1 ) {
           memPakCntr = 0;
@@ -370,6 +386,7 @@ void __not_in_flash_func( rewriteFlashListener() ) {
       writeMemPakCntrToFlash( memPakCntr );
       indexStored = 1;
     }
+    
     
     sleep_ms( REWRITECHECKINT_MS );
   }
@@ -411,4 +428,41 @@ void doBlinkPattern( uint32_t count ) {
     gpio_put( LED_INT, 0 );
     sleep_ms( BLINKPATTERNINT_MS );
   }
+}
+
+void enterUSBMode() {
+  // Start USB-related tasks.
+  board_init();
+  tusb_init();
+  
+  while ( 1 ) {
+    tud_task();
+  }
+}
+
+// USB-related callback functions.
+
+void tud_mount_cb(void)
+{
+  
+}
+
+// Invoked when device is unmounted
+void tud_umount_cb(void)
+{
+  
+}
+
+// Invoked when usb bus is suspended
+// remote_wakeup_en : if host allow us  to perform remote wakeup
+// Within 7ms, device must draw an average of current less than 2.5 mA from bus
+void tud_suspend_cb(bool remote_wakeup_en)
+{
+  (void) remote_wakeup_en;
+}
+
+// Invoked when usb bus is resumed
+void tud_resume_cb(void)
+{
+  
 }
