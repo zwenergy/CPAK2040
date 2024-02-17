@@ -7,6 +7,7 @@ For this, a Raspberry Pi Pico board is used, as it is widely available, cheap an
 
 A regular Raspberry Pi Pico board has a 2 MB Flash, whereas a single N64 controller pak has a capacity of 32 kB.
 The software running on the Pico to emulate the controller pak only takes up a fraction of the available Flash memory, hence quite many "virtual controller paks" can be stored in the Pico's Flash.
+By default, the CPAK2040 holds 10 "virtual controller paks", as a more efficient navigating method needs to implemented to better use a larger number of controller paks.
 
 ## BOM
 Well, the BOM is short.
@@ -52,6 +53,16 @@ Note that many games will not reload the controller pak content, unless they sen
 
 The simple "hold button to increase VCP index" is not ideal, especially with a larger number of VCPs.
 I am planning on adding a better navigating scheme.
+
+### Backup Controller Pak Data
+When plugging in the CPAK2040 via USB to a computer, the BOOTSEL button can be hold for 10 seconds (**AFTER** plugging in via USB).
+This enables USB mode, which registers the CPAK2040 as a mass storage device and all the controller paks can be copied off the device (this is implemented using TinyUSB).
+There is currently no way to manually exit the USB mode again, so the CPAK2040 needs to be unplugged before used again normally.
+
+**Writing to the CPAK2040 to restore data is currently not yet implemented, but the next feature I want to include.**
+
+## Shell
+A first version of a 3D printable shell can be found in the STL folder.
 
 ## Disclaimer
 **Use the files and/or schematics to build your own board at your own risk**.
