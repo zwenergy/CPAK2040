@@ -17,7 +17,7 @@ You need the **PCB** and a **Raspberry Pi Pico board**.
 
 ## PCB
 The Gerber files to create the PCB can be found in the "gerber" folder.
-You need to order the PCB with **1.2 mm thickness** and **ENIG or hard gold**.
+You need to order the PCB with **1.2 mm thickness**, **ENIG or hard gold** and **bevelled edges** at the connector.
 Using regular HASL is not recommended, as the PCB contacts quickly wear down, while solder may also rub onto the controller's connection pins.
 
 ## Setting up the Pi Pico
