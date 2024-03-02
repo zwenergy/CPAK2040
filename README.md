@@ -67,7 +67,7 @@ This is currently still in **experimental mode**.
 
 **ALWAYS MAKE A BACKUP OF YOUR SAVE GAMES!**
 
-To enter USB write mode, hold the BOTTSEL button long (>2 seconds), let go shortly, then again hold it long (**AFTER** plugging in via USB).
+To enter USB write mode, hold the BOOTSEL button long (>2 seconds), let go shortly, then again hold it long (**AFTER** plugging in via USB).
 This enables USB write mode, which registers the CPAK2040 as a mass storage device.
 In this mode, only the current chosen VCP is visible and named "MEMPAK.MPK".
 **IMPORTANT: Wait 5 seconds after mounting the USB drive before continuing.**
