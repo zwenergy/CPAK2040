@@ -5,6 +5,7 @@
 #include "hardware/structs/ioqspi.h"
 #include "hardware/structs/sio.h"
 #include "pico/time.h"
+#include "hardware/watchdog.h"
 
 // USB-related
 #include "bsp/board.h"
@@ -68,18 +69,24 @@
 // Waiting time after a write to the mem pak before the Flash is rewritten.
 #define REWRITEWAIT_MS 5000
 
-// Waiting time to enable USB mode (multiples of REWRITECHECKINT_MS)
-#define USBMODEWAIT (5000/REWRITECHECKINT_MS)
+// Minimum time for a "long press"
+#define LONGPRESS_MS 1500
 
-// Counter for checking mempak button change activate (multiples of REWRITECHECKINT_MS)
-#define MEMPAKCHANGECNTMAX 4
+// Maximum pause between button inputs for a sequence.
+#define MAXPAUSE_MS 1000
+
+// Maximum length of sequence.
+#define MAXSEQUENCE 2
 
 // Blink pattern interval.
 #define BLINKPATTERNINT_MS 250
 
 // Time for the current mempak index to be stored as the current one to
-// Flash (multiples of REWRITECHECKINT_MS).
-#define MEMPAKCHANGESTOREINDEX (10000/REWRITECHECKINT_MS)
+// Flash.
+#define MEMPAKCHANGESTOREINDEX_MS 2000
+
+// Time to restart after USB rewrite.
+#define EJECTTIME_MS 500
 
 // Some function declarations.
 void writeMemPakToFlash( uint8_t* pak );
@@ -92,6 +99,8 @@ uint32_t getBootSelButton();
 void doBlinkPattern( uint32_t count );
 void enterUSBMode();
 
+extern uint32_t fullUSBWriteDone;
+
 // The actual controller pak.
 uint8_t mempak[ MEMPAKSIZE ];
 
@@ -100,6 +109,23 @@ volatile uint32_t rewriteFlash = 0;
 
 // Mempak counter
 volatile uint8_t memPakCntr = 0;
+
+// Which USB mode should be activated.
+uint32_t usbReadMode = 1;
+
+// An array for the last  button presses.
+typedef enum pressType {
+  LONGPRESS,
+  SHORTPRESS
+} pressType_t;
+
+typedef enum actionHandle {
+  NONE,
+  NEXTPAK,
+  USB_READ,
+  USB_WRITE
+} actionHandle_t;
+
 
 void initGPIO() {
   // Set pin directions.
@@ -169,6 +195,12 @@ void initGPIO() {
   
 }
 
+void softwareReset()
+{
+    watchdog_enable( 1, 1 );
+    while( 1 );
+}
+
 // The actual live mem pak handling.
 void __not_in_flash_func( doMemPakAction() ) {
   
@@ -227,10 +259,6 @@ int __not_in_flash_func( main() ) {
   
   // Signal which mem pak is active.
   doBlinkPattern( memPakCntr + 1 );
-  
-  // Start USB-related tasks.
-  //board_init();
-  //tusb_init();
   
   // Wait a bit to continue, so that the second core is up and running,
   // because the "checking bootsel button" function called in the 
@@ -307,6 +335,84 @@ uint8_t __not_in_flash_func( readMemPakCntrFromFlash() ) {
   return cntr;
 }
 
+
+// Keeps the timestamp in ms since the button is pressed, 0 if not pressed.
+uint32_t pressedSince = 0;
+// Keeps the timestamp in ms since the last button input.
+uint32_t lastButtonRelease = 0;
+pressType_t buttonSequence[ MAXSEQUENCE ];
+uint32_t buttonSequenceInd = 0;
+
+// Checks for button presses and handles them.
+actionHandle_t __not_in_flash_func( buttonPressHandle() ) {
+  // Check if active
+  uint32_t btn = getBootSelButton();
+  // Get time.
+  uint32_t curTime = to_ms_since_boot( get_absolute_time() );
+  
+  if ( btn ) {
+    // Newly pressed?
+    if ( !pressedSince ) {
+      pressedSince = curTime;
+    }
+    
+  } else {
+    // Check if it has been just released.
+    if ( pressedSince ) {
+      // Evaluate if long press or short press.
+      pressType_t lastInput = SHORTPRESS;
+      if ( curTime - pressedSince > LONGPRESS_MS ) {
+        lastInput = LONGPRESS;
+      }
+      
+      if ( buttonSequenceInd < MAXSEQUENCE ) {
+        buttonSequence[ buttonSequenceInd ] = lastInput;
+      }
+      
+      // Set back to zero.
+      pressedSince = 0;
+      lastButtonRelease = curTime;
+      buttonSequenceInd++;
+      
+    } else {
+      // Button is not pressed and also has not been released just now.
+      // Check if a sequence is still ongoing.
+      if ( lastButtonRelease ) {
+        if ( curTime - lastButtonRelease >= MAXPAUSE_MS ) {
+          
+          // We just hit over the sequence timer.
+          // Evaluate sequence.
+          actionHandle_t retVal = NONE;
+          if ( buttonSequenceInd == 1 ) {
+            // One input.
+            if ( buttonSequence[ 0 ] == SHORTPRESS ) {
+              retVal = NEXTPAK;
+            } else {
+              retVal = USB_READ;
+            }
+            
+          } else if ( buttonSequenceInd == 2 ) {
+            // Two inputs.
+            if ( buttonSequence[ 0 ] == LONGPRESS &&
+                 buttonSequence[ 1 ] == LONGPRESS ) {
+              retVal = USB_WRITE;
+            }
+          }
+          
+          // Set back to 0.
+          lastButtonRelease = 0;
+          buttonSequenceInd = 0;
+          
+          // Return value.
+          return retVal;
+        }
+      }
+    }
+  }
+  
+  return NONE;
+};
+
 void __not_in_flash_func( rewriteFlashListener() ) {
   // This function basically just
   // waits for the Flash to be rewritten.
@@ -316,10 +422,9 @@ void __not_in_flash_func( rewriteFlashListener() ) {
   // This function also listens to the bootsel button for changing the
   // virtual mem pak. We use the bootsel button, because we ran out of
   // regular GPIOs to use on a normal Pico board.
-  uint32_t buttonPushCnt = 0;
-  uint32_t changeDone = 0;
-  uint32_t indexChangeCnt = -1;
-  uint32_t indexStored = 1;
+  
+  uint32_t indexChange = 0;
+  uint32_t indexChangeTime = 0;
   
   while ( 1 ) {
     // Check if we should rewrite.
@@ -347,48 +452,41 @@ void __not_in_flash_func( rewriteFlashListener() ) {
     
     
     // Check for button press.
-    uint32_t curButton = getBootSelButton();
-
-    if ( curButton ) {
-      if ( buttonPushCnt >= USBMODEWAIT ) {
-        enterUSBMode();
-        
-      } else if ( buttonPushCnt >= MEMPAKCHANGECNTMAX && !changeDone ) {
-        // Increase mem pak counter.
-        if ( memPakCntr >= NRMEMPAKS - 1 ) {
-          memPakCntr = 0;
-        } else {
-          ++memPakCntr;
-        }
-        
-        // Reload mem pak.
-        readMemPakFromFlash( mempak );
-
-        doBlinkPattern( memPakCntr + 1 );
-        
-        indexChangeCnt = 0;
-        indexStored = 0;
-        changeDone = 1;
+    actionHandle_t act = buttonPressHandle();
+    
+    if ( act == USB_READ ) {
+      usbReadMode = 1;
+      enterUSBMode();
+      
+    } else if ( act == USB_WRITE ) {
+      usbReadMode = 0;
+      enterUSBMode();
+      
+    } else if ( act == NEXTPAK ) {
+      // Increase mem pak counter.
+      if ( memPakCntr >= NRMEMPAKS - 1 ) {
+        memPakCntr = 0;
+      } else {
+        ++memPakCntr;
       }
       
-      ++buttonPushCnt;
+      // Reload mem pak.
+      readMemPakFromFlash( mempak );
+
+      doBlinkPattern( memPakCntr + 1 );
       
-    } else {
-      buttonPushCnt = 0;
-      changeDone = 0;
+      indexChange = 1;
+      indexChangeTime = to_ms_since_boot( get_absolute_time() );
     }
-    
-    if ( indexChangeCnt <= MEMPAKCHANGESTOREINDEX ) {
-      ++indexChangeCnt;
+
+    if ( indexChange ) {
+      uint32_t curTime = to_ms_since_boot( get_absolute_time() );
       
-    } else if ( !indexStored ) {
-      // Write the current mem pak counter to flash.
-      writeMemPakCntrToFlash( memPakCntr );
-      indexStored = 1;
+      if ( ( curTime - indexChangeTime ) >= MEMPAKCHANGESTOREINDEX_MS ) {
+        writeMemPakCntrToFlash( memPakCntr );
+        indexChange = 0;
+      }
     }
-    
-    
-    sleep_ms( REWRITECHECKINT_MS );
   }
 }
 
@@ -405,7 +503,7 @@ uint32_t __not_in_flash_func( getBootSelButton() ) {
     
   // Sleep function is in Flash (which is not working now), so we just
   // count up a bit.
-  for ( volatile int32_t i = 0; i < 1000; ++i );
+  for ( volatile int32_t i = 0; i < 3000; ++i );
   
   // Read out the button state.
   uint32_t b = !( sio_hw->gpio_hi_in & ( 1u << FLASH_CS_PIN ) );
@@ -437,6 +535,12 @@ void enterUSBMode() {
   
   while ( 1 ) {
     tud_task();
+    
+    // In case a full rewrite happened, we restart the RP2040 to get back
+    if ( fullUSBWriteDone && 
+         ( to_ms_since_boot( get_absolute_time() ) - fullUSBWriteDone > EJECTTIME_MS ) ) {
+      softwareReset();
+    }
   }
 }
 
