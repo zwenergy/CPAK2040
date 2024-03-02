@@ -46,10 +46,10 @@ Realistically, this should be enough forever for most people I guess.
 If you save each day 10 times to the controller pak, you can do that for 27 years straight before you're getting close the 100,000 writes.
 
 ### Changing Virtual Controller Pak
-To change the current virtual controller pak (VCP), hold the BOOTSEL button down.
+To change the current virtual controller pak (VCP), shortly the BOOTSEL button down.
 The CPAK2040 will jump to the next VCP, indicating the current index by flashing the LED.
 After the last VCP, the index will jump back to the first.
-The current VCP index is stored into the Flash after 10s not changing it, so also after unplugging the CPAK2040 it will remember the last VCP used.
+The current VCP index is stored into the Flash after 2s not changing it, so also after unplugging the CPAK2040 it will remember the last VCP used.
 
 Note that many games will not reload the controller pak content, unless they sense that the controller pak is physically removed and plugged back in again.
 
@@ -57,11 +57,23 @@ The simple "hold button to increase VCP index" is not ideal, especially with a l
 I am planning on adding a better navigating scheme.
 
 ### Backup Controller Pak Data
-When plugging in the CPAK2040 via USB to a computer, the BOOTSEL button can be hold for 10 seconds (**AFTER** plugging in via USB).
-This enables USB mode, which registers the CPAK2040 as a mass storage device and all the controller paks can be copied off the device (this is implemented using TinyUSB).
+When plugging in the CPAK2040 via USB to a computer, the BOOTSEL button long (>2 seconds) (**AFTER** plugging in via USB).
+This enables USB read mode, which registers the CPAK2040 as a mass storage device and all the controller paks can be copied off the device (this is implemented using TinyUSB).
 There is currently no way to manually exit the USB mode again, so the CPAK2040 needs to be unplugged before used again normally.
 
-**Writing to the CPAK2040 to restore data is currently not yet implemented, but the next feature I want to include.**
+## Writing Controller Pak Data
+This is currently still in **experimental mode**.
+**AFAIK it does not work properly on Mac OS currently, written controller paks will be garbage on Mac OS right now!**
+
+**ALWAYS MAKE A BACKUP OF YOUR SAVE GAMES!**
+
+To enter USB write mode, hold the BOTTSEL button long (>2 seconds), let go shortly, then again hold it long (**AFTER** plugging in via USB).
+This enables USB write mode, which registers the CPAK2040 as a mass storage device.
+In this mode, only the current chosen VCP is visible and named "MEMPAK.MPK".
+**IMPORTANT: Wait 5 seconds after mounting the USB drive before continuing.**
+In order to replace this VCP, rename the memory pak file to be written to the CPAK2040 also to "MEMPAK.MPK" and copy it to the CPAK2040 drive (so it replaces the file on the drive).
+After writing, the CPAK2040 should automatically disconnect and restart, showing the current chosen VCP via the blinking LED.
+
 
 ## Shell
 A first version of a 3D printable shell can be found in the STL folder.
