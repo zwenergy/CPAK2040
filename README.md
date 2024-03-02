@@ -9,13 +9,15 @@ A regular Raspberry Pi Pico board has a 2 MB Flash, whereas a single N64 control
 The software running on the Pico to emulate the controller pak only takes up a fraction of the available Flash memory, hence quite many "virtual controller paks" can be stored in the Pico's Flash.
 By default, the CPAK2040 holds 10 "virtual controller paks", as a more efficient navigating method needs to implemented to better use a larger number of controller paks.
 
+**DO NOT CONNECT VIA USB WHEN PLUGGED IN A CONTROLLER!**
+
 ## BOM
 Well, the BOM is short.
 You need the **PCB** and a **Raspberry Pi Pico board**.
 
 ## PCB
 The Gerber files to create the PCB can be found in the "gerber" folder.
-You need to order the PCB with **1.2 mm thickness** and **ENIG or hard gold**.
+You need to order the PCB with **1.2 mm thickness**, **ENIG or hard gold** and **bevelled edges** at the connector.
 Using regular HASL is not recommended, as the PCB contacts quickly wear down, while solder may also rub onto the controller's connection pins.
 
 ## Setting up the Pi Pico
