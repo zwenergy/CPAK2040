@@ -46,7 +46,7 @@ Realistically, this should be enough forever for most people I guess.
 If you save each day 10 times to the controller pak, you can do that for 27 years straight before you're getting close the 100,000 writes.
 
 ### Changing Virtual Controller Pak
-To change the current virtual controller pak (VCP), shortly the BOOTSEL button down.
+To change the current virtual controller pak (VCP), shortly the BOOTSEL button down (<1 second).
 The CPAK2040 will jump to the next VCP, indicating the current index by flashing the LED.
 After the last VCP, the index will jump back to the first.
 The current VCP index is stored into the Flash after 2s not changing it, so also after unplugging the CPAK2040 it will remember the last VCP used.
