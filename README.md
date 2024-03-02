@@ -57,7 +57,7 @@ The simple "hold button to increase VCP index" is not ideal, especially with a l
 I am planning on adding a better navigating scheme.
 
 ### Backup Controller Pak Data
-When plugging in the CPAK2040 via USB to a computer, the BOOTSEL button long (>2 seconds) (**AFTER** plugging in via USB).
+When plugging in the CPAK2040 via USB to a computer, the BOOTSEL button long (>2 seconds) and let go (**AFTER** plugging in via USB).
 This enables USB read mode, which registers the CPAK2040 as a mass storage device and all the controller paks can be copied off the device (this is implemented using TinyUSB).
 There is currently no way to manually exit the USB mode again, so the CPAK2040 needs to be unplugged before used again normally.
 
