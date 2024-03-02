@@ -61,7 +61,7 @@ When plugging in the CPAK2040 via USB to a computer, the BOOTSEL button long (>2
 This enables USB read mode, which registers the CPAK2040 as a mass storage device and all the controller paks can be copied off the device (this is implemented using TinyUSB).
 There is currently no way to manually exit the USB mode again, so the CPAK2040 needs to be unplugged before used again normally.
 
-## Writing Controller Pak Data
+### Writing Controller Pak Data
 This is currently still in **experimental mode**.
 **AFAIK it does not work properly on Mac OS currently, written controller paks will be garbage on Mac OS right now!**
 
