@@ -63,7 +63,6 @@ There is currently no way to manually exit the USB mode again, so the CPAK2040 n
 
 ### Writing Controller Pak Data
 This is currently still in **experimental mode**.
-**AFAIK it does not work properly on Mac OS currently, written controller paks will be garbage on Mac OS right now!**
 
 **ALWAYS MAKE A BACKUP OF YOUR SAVE GAMES!**
 
