@@ -41,9 +41,6 @@ extern volatile uint8_t memPakCntr;
 extern uint32_t usbReadMode;
 void doBlinkPattern( uint32_t count );
 
-// Timestamp when USB was mounted
-uint32_t mountedTimeStamp = 0;
-
 // Flag for when a full write happened.
 uint32_t fullUSBWriteDone = 0;
 
@@ -397,10 +394,6 @@ void tud_msc_inquiry_cb(uint8_t lun, uint8_t vendor_id[8], uint8_t product_id[16
 bool tud_msc_test_unit_ready_cb(uint8_t lun)
 {
   (void)lun;
-  
-  if ( mountedTimeStamp == 0 ) {
-    mountedTimeStamp = to_ms_since_boot( get_absolute_time() );
-  }
 
   // RAM disk is ready until ejected
   if (ejected)
@@ -490,6 +483,7 @@ bool tud_msc_is_writable_cb(uint8_t lun)
 // Temporary write buffer.
 uint8_t writeBuffer[ MEMPAKSIZE * 2 ];
 uint32_t offsetCnt = 0;
+uint32_t didFlash = 0;
 
 // Callback invoked when received WRITE10 command.
 // Process data in buffer to disk's storage and return number of written bytes
@@ -504,30 +498,21 @@ int32_t tud_msc_write10_cb(uint8_t lun, uint32_t lba, uint32_t offset, uint8_t* 
   if ( lba >= DISK_BLOCK_NUM_WRITE )
     return -1;
   
-  // Writes to non-data
-  if ( lba < 3 ) {
-    uint8_t* addr = msc_disk_write[lba] + offset;
-    memcpy( addr, buffer, bufsize );
-    
-  } else {
-    // Ignore writes too early (...Windows tries to write info files
-    // onto a fresh drive after mounting)
-    if ( to_ms_since_boot( get_absolute_time() ) - mountedTimeStamp >
-         MINMOUNTTIME_MS ) {
-           
-      // Actual data write.
+  if ( lba >= 3 ) {
+    // Actual data write.
       memcpy( writeBuffer + offsetCnt, buffer, bufsize );
-      
       offsetCnt += bufsize;
-
-      // Full mempak?
-      if ( offsetCnt == MEMPAKSIZE ) {
-        writeMemPakToFlash( writeBuffer );
-        fullUSBWriteDone = to_ms_since_boot( get_absolute_time() );
-      }
       
+  } else if ( lba == 2 ) {
+    // Check if the offset cnt is right.
+    if ( offsetCnt == MEMPAKSIZE && !didFlash ) {
+      writeMemPakToFlash( writeBuffer );
+      fullUSBWriteDone = to_ms_since_boot( get_absolute_time() );
+      didFlash = 1;
     }
-  } 
+    
+    offsetCnt = 0;
+  }
 
   return (int32_t) bufsize;
 }
