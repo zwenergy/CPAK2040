@@ -13,7 +13,8 @@ By default, the CPAK2040 holds 10 "virtual controller paks", as a more efficient
 
 ## BOM
 Well, the BOM is short.
-You need the **PCB** and a **Raspberry Pi Pico board**.
+You need the **PCB** and a **Raspberry Pi Pico board**. 
+**Don't use a Pi Pico W board**, use a regular one.
 
 ## PCB
 The Gerber files to create the PCB can be found in the "gerber" folder.
